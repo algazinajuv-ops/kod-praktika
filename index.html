@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#14161d">
+  <title>КодПрактика — тренажёр программирования</title>
+  <meta name="description" content="Решай задачи на Python и JavaScript, запускай код и проверяй знания.">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-row">
+      <a href="/" class="logo"><span aria-hidden="true">&lt;/&gt;</span>КодПрактика</a>
+      <nav aria-label="Разделы">
+        <button type="button" class="nav-button" id="practice-tab" aria-pressed="true">Практика</button>
+        <button type="button" class="nav-button" id="quiz-tab" aria-pressed="false">Проверка знаний</button>
+      </nav>
+      <button type="button" id="settings-button" class="outline"><span aria-hidden="true">⚙</span> Настройки ИИ</button>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="hero">
+      <div>
+        <h1>Учись писать код.<br>Решай задачи.</h1>
+        <p>Выбери язык и уровень, запусти решение и проверь себя на тестах.</p>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="code-window">
+          <div class="window-head"><i></i><i></i><i></i></div>
+          <div class="window-code"><span class="code-line"><b>1</b><span><em>for</em> step <em>in</em> range(3):</span></span><span class="code-line"><b>2</b><span>&nbsp;&nbsp;practice(step)</span></span><span class="code-line"><b>3</b><span>&nbsp;</span></span><span class="code-line good"><b>4</b><span>✓ Тесты пройдены</span></span></div>
+        </div>
+        <span class="angle">{ }</span>
+      </div>
+    </section>
+    <section class="toolbar" aria-label="Параметры задания">
+      <label>Язык
+        <select id="language"><option value="python">Python</option><option value="javascript">JavaScript</option></select>
+      </label>
+      <label>Сложность
+        <select id="difficulty"><option value="beginner">Начальная</option><option value="intermediate">Средняя</option><option value="advanced">Продвинутая</option></select>
+      </label>
+      <button type="button" class="outline" id="demo-button">Учебный пример</button>
+      <button type="button" class="primary" id="generate"><span aria-hidden="true">✦</span> Новая задача от ИИ</button>
+    </section>
+    <p id="notice" class="notice" role="status" hidden></p>
+    <section class="workspace" id="practice" aria-label="Рабочее место">
+      <article class="card problem">
+        <div class="card-head"><h2>Условие задачи</h2><span id="task-type" class="tag"></span></div>
+        <div class="card-body">
+          <p id="topic" class="topic"></p>
+          <h3 id="task-title"></h3>
+          <p id="statement" class="formatted"></p>
+          <h4>Ввод</h4><p id="input-format" class="formatted"></p>
+          <h4>Вывод</h4><p id="output-format" class="formatted"></p>
+          <h4>Пример</h4>
+          <div class="example">
+            <div><span>Входные данные</span><pre id="sample-in"></pre></div>
+            <div><span>Ответ</span><pre id="sample-out"></pre></div>
+          </div>
+          <details><summary>Подсказка</summary><p id="hint" class="formatted"></p></details>
+          <details><summary>Разбор решения</summary><p id="explanation" class="formatted"></p><pre id="reference"></pre></details>
+        </div>
+      </article>
+      <section class="card coding" aria-label="Редактор и тесты">
+        <div class="card-head"><h2>Редактор</h2><span id="filename" class="tag code"></span></div>
+        <div class="edit-wrap">
+          <pre id="numbers" aria-hidden="true">1</pre>
+          <textarea id="editor" aria-label="Код решения" spellcheck="false" autocomplete="off" autocapitalize="off" maxlength="16000" wrap="off"></textarea>
+        </div>
+        <div class="actions">
+          <button type="button" class="outline" id="run">Запустить</button>
+          <button type="button" class="primary" id="check">Проверить</button>
+          <button type="button" class="outline" id="stop" hidden>Остановить</button>
+        </div>
+        <div class="console">
+          <label for="stdin">Данные для запуска</label>
+          <textarea id="stdin" spellcheck="false" rows="2" maxlength="5000"></textarea>
+          <div class="console-head"><h3>Результат</h3><span id="run-state" class="tag">Ожидает запуска</span></div>
+          <pre id="stdout" role="status">Нажми «Запустить» для своего ввода или «Проверить» для всех тестов.</pre>
+        </div>
+      </section>
+    </section>
+    <section class="card quiz" id="quiz" aria-labelledby="quiz-title" hidden>
+      <div class="card-head"><h2 id="quiz-title">Проверка знаний</h2><span class="tag" id="quiz-topic"></span></div>
+      <form class="card-body" id="quiz-form">
+        <p class="muted">Ответь на вопросы по теме текущей задачи.</p>
+        <div id="questions"></div>
+        <div class="actions quiz-actions"><button class="primary" type="submit">Проверить ответы</button><button type="button" class="outline" id="retry-quiz" hidden>Сбросить ответы</button></div>
+        <p id="score" role="status" hidden></p>
+      </form>
+    </section>
+    <footer><span>КодПрактика</span><span id="progress"></span></footer>
+  </main>
+  <dialog id="settings">
+    <form id="settings-form">
+      <div class="dialog-head"><h2>Настройки ИИ</h2><button class="outline" id="close-settings" type="button" aria-label="Закрыть">×</button></div>
+      <label for="provider">Провайдер</label>
+      <select id="provider"><option value="openai">OpenAI</option><option value="ollama">Ollama</option></select>
+      <p class="muted" id="provider-info"></p>
+      <div id="key-wrap">
+        <label for="api-key">Ключ OpenAI API</label>
+        <input id="api-key" type="password" maxlength="400" autocomplete="off" placeholder="sk-…">
+      </div>
+      <p class="notice bad" id="settings-error" role="alert" hidden></p>
+      <div class="actions quiz-actions"><button type="submit" class="primary">Сохранить</button><button id="forget-key" type="button" class="outline">Удалить ключ</button></div>
+    </form>
+  </dialog>
+</body>
+</html>

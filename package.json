@@ -1,0 +1,11 @@
+{
+  "name": "kod-praktika",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env start.mjs",
+    "build": "node build.mjs --build"
+  }
+}
