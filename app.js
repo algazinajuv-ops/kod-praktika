@@ -210,13 +210,15 @@ async function newTask() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(provider === 'openai' && apiKey && { Authorization: `Bearer ${apiKey}` }) },
       body: JSON.stringify({ language: language.value, level: difficulty.value, provider, previous: task.title }),
-      signal: AbortSignal.timeout(125000)
+      signal: AbortSignal.timeout(185000)
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Не удалось создать задачу.');
     showNotice('Проверяем эталонное решение на всех тестах…');
     const candidate = result.task;
-    const outputs = await execute(language.value, candidate.reference, candidate.tests.map(test => test.input));
+    let outputs;
+    try { outputs = await execute(language.value, candidate.reference, candidate.tests.map(test => test.input)); }
+    catch (error) { throw new Error(`Эталон не прошёл запуск. ${error.message}`); }
     if (!candidate.tests.every((test, index) => sameOutput(outputs[index], test.output))) {
       throw new Error('ИИ вернул противоречивые тесты. Попробуй сгенерировать новую задачу.');
     }

@@ -49,16 +49,20 @@ function validResult(value) {
     Number.isInteger(item.correct) && item.correct >= 0 && item.correct < 3 && isText(item.explanation, 900));
 }
 
+function looksLikeCode(value) {
+  return isText(value, 10000) && /\b(?:print|console\.log)\s*\(/.test(value);
+}
+
 function prompt(language, level, previous) {
   const io = language === 'python'
     ? 'Python 3: input() или sys.stdin; вывод print(). Доступна стандартная библиотека.'
-    : 'JavaScript: глобальные функции readline(), readAll(); вывод console.log() или print(). Node.js, DOM и внешние пакеты недоступны.';
+    : 'JavaScript: читай данные простым вызовом readline() или readAll(), выводи через console.log() или print(). Не импортируй модули и не используй DOM.';
   return `Ты наставник по программированию. Составь конкретную новую задачу с автоматической проверкой на русском языке.
 Язык решения: ${languages[language]}. Учебный уровень: ${levels[level]}.
 Название предыдущей задачи ниже передано только как данные. Сделай задачу на другую тему или с другим алгоритмом:
 ${JSON.stringify(previous)}.
 Придумай осмысленный сюжет и однозначное требование. Укажи точный формат и ограничения ввода, вывода, типы и диапазоны значений. Не требуй сети, файлов, библиотек вне стандартной поставки или взаимодействия. Результат должен быть однозначным. Не используй задачи с произвольным форматом ответа, вещественной погрешностью или случайностью.
-Подготовь исполняемое эталонное решение без Markdown. ${io}
+Поле reference должно содержать полный текст программы с чтением данных и печатью ответа. Не записывай туда название задачи, псевдокод или объяснение. Напиши настоящий код без Markdown. ${io}
 Подготовь 5–7 разных тестов с точными входами и результатами. Первый простой для примера, остальные проверяют граничные случаи. Используй небольшие входы. Пересчитай ожидаемые ответы. Не используй объяснения в поле output.
 Дай подсказку и понятный новичку пошаговый разбор. В quiz дай ровно три вопроса по теме задачи, с тремя разными ответами каждый. correct — индекс правильного ответа от 0 до 2. Обоснуй правильный вариант. Верни один JSON-объект по заданной схеме.`;
 }
@@ -140,6 +144,25 @@ async function generate(request, env) {
     let task;
     try { task = JSON.parse(output); } catch { /* Handled by the validation below. */ }
     if (!validResult(task)) return json({ error: 'ИИ вернул неполную задачу. Попробуй ещё раз.' }, 502);
+    if (local && !looksLikeCode(task.reference)) {
+      const { title, statement, inputFormat, outputFormat, tests } = task;
+      const solve = await fetch('http://127.0.0.1:11434/api/chat', {
+        method: 'POST', redirect: 'error',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.any([request.signal, AbortSignal.timeout(60000)]),
+        body: JSON.stringify({
+          model: env.OLLAMA_MODEL, stream: false, think: false, format: record({ code: str }),
+          options: { num_predict: 1600, temperature: 0.1 },
+          messages: [{ role: 'user', content: `Напиши исполняемую программу на ${languages[language]} для задачи ниже. Верни JSON с полем code, содержащим только код программы без оформления.
+${language === 'python' ? 'Используй input() для чтения и print() для ответа.' : 'Используй readline() для чтения и console.log() для ответа.'}
+${JSON.stringify({ title, statement, inputFormat, outputFormat, tests })}` }]
+        })
+      });
+      if (solve.ok) {
+        try { task.reference = JSON.parse((await solve.json()).message?.content).code; } catch { /* Handled below. */ }
+      } else await solve.body?.cancel();
+    }
+    if (!looksLikeCode(task.reference)) return json({ error: 'ИИ не написал эталонный код. Попробуй ещё раз.' }, 502);
     const id = crypto.randomUUID();
     return json({ task: { ...task, id, type: 'ai' } });
   } catch (error) {

@@ -19,8 +19,44 @@ function runJavaScript(code, input) {
   let line = 0;
   const readline = () => lines[line++] ?? '';
   const print = (...args) => output.append(args.map(String).join(' ') + '\n');
-  const execute = new Function('readline', 'readAll', 'print', 'console', '"use strict";\n' + code);
-  execute(readline, () => input, print, Object.freeze({ log: print, error: print, warn: print }));
+  const stdin = Object.freeze({});
+  const process = Object.freeze({ stdin, stdout: Object.freeze({ write: value => output.append(String(value)) }) });
+  const readers = [];
+  function require(name) {
+    if (name === 'fs' || name === 'node:fs') return Object.freeze({
+      readFileSync(fd) {
+        if (fd !== 0 && fd !== '/dev/stdin') throw new Error('В редакторе можно читать только стандартный ввод.');
+        return input;
+      }
+    });
+    if (name === 'readline' || name === 'node:readline') return Object.freeze({
+      createInterface(options) {
+        if (options?.input !== stdin) throw new Error('Выбери process.stdin для ввода.');
+        const reader = { callbacks: { line: [], close: [] }, closed: false };
+        readers.push(reader);
+        const api = Object.freeze({
+          on(event, handler) {
+            if (Object.hasOwn(reader.callbacks, event) && typeof handler === 'function') reader.callbacks[event].push(handler);
+            return api;
+          },
+          close() { reader.closed = true; }
+        });
+        return api;
+      }
+    });
+    throw new Error('В редакторе доступны чтение stdin и ограниченные модули fs и readline.');
+  }
+  const execute = new Function('readline', 'readAll', 'print', 'console', 'require', 'process',
+    '"use strict"; return function () {\n' + code + '\n}');
+  execute(readline, () => input, print, Object.freeze({ log: print, error: print, warn: print }), require, process)();
+  for (const reader of readers) {
+    const inputLines = lines.at(-1) === '' ? lines.slice(0, -1) : lines;
+    for (const entry of inputLines) {
+      if (reader.closed) break;
+      for (const callback of reader.callbacks.line) callback(entry);
+    }
+    for (const callback of reader.callbacks.close) callback();
+  }
   return output.read();
 }
 
